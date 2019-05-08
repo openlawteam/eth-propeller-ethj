@@ -15,7 +15,7 @@ import java.math.BigInteger;
  */
 public class LocalExecutionService {
     private static final long GAS_LIMIT_FOR_LOCAL_EXECUTION = 100_000_000_000L;
-    private final BlockchainImpl blockchain;
+
 
     public LocalExecutionService(BlockchainImpl blockchain) {
         this.blockchain = blockchain;
@@ -34,7 +34,7 @@ public class LocalExecutionService {
 
     private TransactionExecutor execute(final EthAccount account, final EthAddress address, final EthValue value, final EthData data) {
         Block callBlock = blockchain.getBestBlock();
-        Repository repository = getRepository().getSnapshotTo(callBlock.getStateRoot()).startTracking();
+        BlockchainRepository repository = getRepository().getSnapshotTo(callBlock.getStateRoot()).startTracking();
         try {
             Transaction tx = createTransaction(account, BigInteger.ZERO, BigInteger.ZERO, address, value, data);
             TransactionExecutor executor = new TransactionExecutor(tx, callBlock.getCoinbase(), repository, blockchain.getBlockStore(), blockchain.getProgramInvokeFactory(), callBlock).setLocalCall(true);

@@ -160,12 +160,12 @@ public class EthereumTest implements EthereumBackend {
     private SECP256K1.PublicKey getKey(EthAccount account) { return new SECP256K1.PublicKey.fromInteger(account.getBigIntPrivateKey()); }
 
     BlockInfo toBlockInfo(Block block) {
-        return new BlockInfo(block.getNumber(), block.body().transactions().stream()
+        return new BlockInfo(block.header().number(), block.body().transactions().stream()
                 .map(tx -> this.toReceipt(tx, EthHash.of(block.header().hash().toBytes().toArray()))).collect(Collectors.toList()));
     }
 
     private TransactionReceipt toReceipt(Transaction tx, EthHash blockHash) {
-        EthValue value = tx.value().bitLength() == 0 ? EthValue.wei(0) : EthValue.wei(new BigInteger(1, tx.value()));
+        EthValue value = tx.value().bitLength() == 0 ? EthValue.wei(0) : EthValue.wei(new BigInteger(1, tx.value().toBytes().toArray()));
         List<Log> logs = blockchain.getBlockchain().getTransactionInfo(tx.hash()).getReceipt().getLogInfoList();
         return new TransactionReceipt(
                 EthHash.of(tx.hash().toBytes().toArray()),

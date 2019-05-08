@@ -4,6 +4,7 @@ import org.adridadou.ethereum.propeller.event.BlockInfo;
 import org.adridadou.ethereum.propeller.event.EthereumEventHandler;
 import org.adridadou.ethereum.propeller.solidity.converters.decoders.EthValueDecoder;
 import org.adridadou.ethereum.propeller.values.*;
+import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.eth.Block;
 import org.apache.tuweni.eth.Log;
 import org.apache.tuweni.eth.Transaction;
@@ -26,11 +27,11 @@ public class EthJEventListener {
 
     static List<EventData> createEventInfoList(EthHash transactionHash, List<Log> logs) {
         return logs.stream().map(log -> {
-            List<DataWord> topics = log.topics();
-            EthData eventSignature = EthData.of(topics.get(0).getData());
-            EthData eventArguments = EthData.of(log.getData());
+            List<Bytes32> topics = log.topics();
+            EthData eventSignature = EthData.of(topics.get(0).toArray());
+            EthData eventArguments = EthData.of(log.toString());
             List<EthData> indexedArguments = topics.subList(1, topics.size()).stream()
-                    .map(dw -> EthData.of(dw.getData()))
+                    .map(dw -> EthData.of(dw.toArray()))
                     .collect(Collectors.toList());
 
             return new EventData(transactionHash, eventSignature, eventArguments, indexedArguments);
@@ -39,7 +40,7 @@ public class EthJEventListener {
 
     static org.adridadou.ethereum.propeller.values.TransactionReceipt toReceipt(TransactionReceipt transactionReceipt, EthHash blockHash) {
         Transaction tx = transactionReceipt.getTransaction();
-        BigInteger txValue = tx.value().length > 0 ? new BigInteger(tx.value()) : BigInteger.ZERO;
+        BigInteger txValue = tx.value().toBytes().toArray().length > 0 ? new BigInteger(tx.value().toBytes().toArray()) : BigInteger.ZERO;
         if (txValue.signum() == -1) {
             txValue = BigInteger.ZERO;
         }
@@ -47,9 +48,9 @@ public class EthJEventListener {
                 EthHash.of(tx.hash().toBytes().toArray()),
                 blockHash,
                 EthAddress.of(tx.sender().toBytes().toArray()),
-                EthAddress.of(tx.getReceiveAddress()),
+                EthAddress.of(tx.to().toBytes().toArray()),
                 EthAddress.of(tx.getContractAddress()),
-                EthData.of(tx.getData()),
+                EthData.of(tx.payload().toArray()),
                 transactionReceipt.getError(),
                 EthData.of(transactionReceipt.getExecutionResult()),
                 transactionReceipt.isSuccessful() && transactionReceipt.isValid(),
@@ -59,7 +60,7 @@ public class EthJEventListener {
 
     public void onBlock(Block block, List<TransactionReceipt> receipts) {
         EthHash blockHash = EthHash.of(block.header().hash().toBytes().toArray());
-        eventHandler.onBlock(new BlockInfo(block.getNumber(), receipts.stream().map(receipt -> EthJEventListener.toReceipt(receipt, blockHash)).collect(Collectors.toList())));
+        eventHandler.onBlock(new BlockInfo(block.header().number(), receipts.stream().map(receipt -> EthJEventListener.toReceipt(receipt, blockHash)).collect(Collectors.toList())));
         receipts.forEach(receipt -> eventHandler.onTransactionExecuted(new TransactionInfo(EthHash.of(receipt.getTransaction().getHash()), toReceipt(receipt, blockHash), TransactionStatus.Executed, EthHash.empty())));
     }
 

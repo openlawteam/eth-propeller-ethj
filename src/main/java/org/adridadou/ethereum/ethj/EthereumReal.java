@@ -114,7 +114,7 @@ public class EthereumReal implements EthereumBackend {
     }
 
     private BlockInfo toBlockInfo(Block block) {
-        return new BlockInfo(block.getNumber(), block.getTransactionsList().stream().map(tx -> this.toReceipt(tx, EthHash.of(block.getHash()))).collect(Collectors.toList()));
+        return new BlockInfo(block.header().number().toLong(), block.body().transactions().stream().map(tx -> this.toReceipt(tx, EthHash.of(block.header().hash().toBytes().toArray()))).collect(Collectors.toList()));
     }
 
     private org.adridadou.ethereum.propeller.values.TransactionReceipt toReceipt(Transaction tx, EthHash blockHash) {
@@ -122,14 +122,14 @@ public class EthereumReal implements EthereumBackend {
                 EthHash.of(tx.hash().toBytes().toArray()),
                 blockHash,
                 EthAddress.of(tx.sender().toBytes().toArray()),
-                EthAddress.of(tx.getReceiveAddress()),
+                EthAddress.of(tx.to().toBytes().toArray()),
                 EthAddress.empty(),
-                EthData.of(tx.getData()),
+                EthData.of(tx.payload().toArray()),
                 "",
                 EthData.empty(),
                 true,
                 Collections.emptyList(),
-                ethValueDecoder.decode(0, EthData.of(tx.value()), EthValue.class)
+                ethValueDecoder.decode(0, EthData.of(tx.value().toBytes().toArray()), EthValue.class)
         );
     }
 }
