@@ -9,16 +9,11 @@ import org.adridadou.ethereum.propeller.event.BlockInfo;
 import org.adridadou.ethereum.propeller.event.EthereumEventHandler;
 import org.adridadou.ethereum.propeller.exception.EthereumApiException;
 import org.adridadou.ethereum.propeller.values.*;
-import org.ethereum.config.BlockchainNetConfig;
-import org.ethereum.config.blockchain.DaoNoHFConfig;
-import org.ethereum.config.blockchain.HomesteadConfig;
-import org.ethereum.config.blockchain.PetersburgConfig;
-import org.ethereum.core.Block;
-import org.ethereum.core.Transaction;
-import org.ethereum.crypto.ECKey;
+import org.apache.tuweni.crypto.SECP256K1;
+import org.apache.tuweni.eth.Block;
+import org.apache.tuweni.eth.Log;
+import org.apache.tuweni.eth.Transaction;
 import org.ethereum.util.ByteUtil;
-import org.ethereum.util.blockchain.StandaloneBlockchain;
-import org.ethereum.vm.LogInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +29,7 @@ import java.util.stream.Collectors;
  * This code is released under Apache 2 license
  */
 public class EthereumTest implements EthereumBackend {
+
     private final StandaloneBlockchain blockchain;
     private final TestConfig testConfig;
     private final ReplaySubject<Transaction> transactionPublisher = ReplaySubject.create(100);
@@ -60,7 +56,6 @@ public class EthereumTest implements EthereumBackend {
 
     private BlockchainNetConfig getBlockchainConfig() {
         return new PetersburgConfig(new DaoNoHFConfig(new HomesteadConfig(new HomesteadConfig.HomesteadConstants() {
-            @Override
             public BigInteger getMINIMUM_DIFFICULTY() {
                 return BigInteger.ONE;
             }
@@ -103,7 +98,7 @@ public class EthereumTest implements EthereumBackend {
     public EthHash submit(TransactionRequest request, Nonce nonce) {
         Transaction tx = createTransaction(request, nonce);
         transactionPublisher.onNext(tx);
-        return EthHash.of(tx.getHash());
+        return EthHash.of(tx.hash().toBytes().toArray());
     }
 
     private Transaction createTransaction(TransactionRequest request, Nonce nonce) {
@@ -162,28 +157,26 @@ public class EthereumTest implements EthereumBackend {
         });
     }
 
-    private ECKey getKey(EthAccount account) {
-        return ECKey.fromPrivate(account.getBigIntPrivateKey());
-    }
+    private SECP256K1.PublicKey getKey(EthAccount account) { return new SECP256K1.PublicKey.fromInteger(account.getBigIntPrivateKey()); }
 
     BlockInfo toBlockInfo(Block block) {
-        return new BlockInfo(block.getNumber(), block.getTransactionsList().stream()
-                .map(tx -> this.toReceipt(tx, EthHash.of(block.getHash()))).collect(Collectors.toList()));
+        return new BlockInfo(block.getNumber(), block.body().transactions().stream()
+                .map(tx -> this.toReceipt(tx, EthHash.of(block.header().hash().toBytes().toArray()))).collect(Collectors.toList()));
     }
 
     private TransactionReceipt toReceipt(Transaction tx, EthHash blockHash) {
-        EthValue value = tx.getValue().length == 0 ? EthValue.wei(0) : EthValue.wei(new BigInteger(1, tx.getValue()));
-        List<LogInfo> logs = blockchain.getBlockchain().getTransactionInfo(tx.getHash()).getReceipt().getLogInfoList();
+        EthValue value = tx.value().bitLength() == 0 ? EthValue.wei(0) : EthValue.wei(new BigInteger(1, tx.value()));
+        List<Log> logs = blockchain.getBlockchain().getTransactionInfo(tx.hash()).getReceipt().getLogInfoList();
         return new TransactionReceipt(
-                EthHash.of(tx.getHash()),
+                EthHash.of(tx.hash().toBytes().toArray()),
                 blockHash,
-                EthAddress.of(tx.getSender()),
-                EthAddress.of(tx.getReceiveAddress()),
+                EthAddress.of(tx.sender().toBytes().toArray()),
+                EthAddress.of(tx.to().toBytes().toArray()),
                 EthAddress.empty(),
-                EthData.of(tx.getData()),
+                EthData.of(tx.payload().toArray()),
                 "",
                 EthData.empty(),
                 true,
-                EthJEventListener.createEventInfoList(EthHash.of(tx.getHash()), logs), value);
+                EthJEventListener.createEventInfoList(EthHash.of(tx.hash().toBytes().toArray()), logs), value);
     }
 }

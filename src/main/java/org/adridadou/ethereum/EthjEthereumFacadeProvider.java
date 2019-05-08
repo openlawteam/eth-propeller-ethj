@@ -11,8 +11,6 @@ import org.adridadou.ethereum.propeller.EthereumFacade;
 import org.adridadou.ethereum.propeller.event.EthereumEventHandler;
 import org.adridadou.ethereum.propeller.values.ChainId;
 import org.adridadou.ethereum.values.config.BlockchainConfig;
-import org.ethereum.config.SystemProperties;
-import org.ethereum.facade.EthereumFactory;
 import org.springframework.context.annotation.Bean;
 
 

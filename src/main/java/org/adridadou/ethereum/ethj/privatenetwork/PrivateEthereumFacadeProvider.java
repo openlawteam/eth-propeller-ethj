@@ -13,13 +13,8 @@ import org.adridadou.ethereum.propeller.keystore.AccountProvider;
 import org.adridadou.ethereum.propeller.values.EthAccount;
 import org.adridadou.ethereum.values.config.DatabaseDirectory;
 import org.apache.commons.io.FileUtils;
-import org.ethereum.config.SystemProperties;
-import org.ethereum.core.Block;
-import org.ethereum.facade.Ethereum;
-import org.ethereum.facade.EthereumFactory;
-import org.ethereum.mine.Ethash;
-import org.ethereum.mine.MinerListener;
-import org.ethereum.samples.BasicSample;
+import org.apache.tuweni.eth.Block;
+import org.apache.tuweni.eth.Hash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -34,7 +29,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class PrivateEthereumFacadeProvider {
     private static final int MINER_PORT = 55555;
-    private final Logger log = LoggerFactory.getLogger(PrivateEthereumFacadeProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(PrivateEthereumFacadeProvider.class);
     private final EthAccount mainAccount = AccountProvider.fromSeed("cow");
 
     public EthereumFacade create(PrivateNetworkConfig config, EthereumConfig ethereumConfig) {
@@ -64,7 +59,7 @@ public class PrivateEthereumFacadeProvider {
                 FileUtils.copyFile(new File(config.getDbName() + "/mine-dag.dat"), new File("cachedDag/mine-dag.dat"));
                 FileUtils.copyFile(new File(config.getDbName() + "/mine-dag-light.dat"), new File("cachedDag/mine-dag-light.dat"));
             } catch (IOException e) {
-                log.warn("couldn't copy files: " + e.getMessage());
+                logger.warn("couldn't copy files: " + e.getMessage());
             }
         }
 
@@ -139,21 +134,18 @@ public class PrivateEthereumFacadeProvider {
     /**
      * Miner bean, which just start a miner upon creation and prints miner events
      */
-    static class MinerNode extends BasicSample implements MinerListener {
+    static class MinerNode implements MinerListener {
         public MinerNode() {
             // peers need different loggers
             super("sampleMiner");
         }
 
-        // overriding run() method since we don't need to wait for any discovery,
-        // networking or sync events
-        @Override
         public void run() {
             if (config.isMineFullDataset()) {
                 logger.info("Generating Full Dataset (may take up to 10 min if not cached)...");
                 // calling this just for indication of the dataset generation
                 // basically this is not required
-                Ethash ethash = Ethash.getForBlock(config, ethereum.getBlockchain().getBestBlock().getNumber());
+                Hash ethash = Hash.getForBlock(config, ethereum.getBlockchain().getBestBlock().getNumber());
                 ethash.getFullDataset();
                 logger.info("Full dataset generated (loaded).");
             }
@@ -161,29 +153,24 @@ public class PrivateEthereumFacadeProvider {
             ethereum.getBlockMiner().startMining();
         }
 
-        @Override
         public void miningStarted() {
             logger.info("Miner started");
         }
 
-        @Override
         public void miningStopped() {
             logger.info("Miner stopped");
         }
 
-        @Override
         public void blockMiningStarted(Block block) {
-            logger.info("Start mining block: " + block.getShortDescr());
+            logger.info("Start mining block: " + block.toString());
         }
 
-        @Override
         public void blockMined(Block block) {
             logger.info("Block mined! : \n" + block);
         }
 
-        @Override
         public void blockMiningCanceled(Block block) {
-            logger.info("Cancel mining block: " + block.getShortDescr());
+            logger.info("Cancel mining block: " + block.toString());
         }
     }
 }

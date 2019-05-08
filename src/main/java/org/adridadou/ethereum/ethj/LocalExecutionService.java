@@ -2,8 +2,10 @@ package org.adridadou.ethereum.ethj;
 
 import org.adridadou.ethereum.propeller.exception.EthereumApiException;
 import org.adridadou.ethereum.propeller.values.*;
-import org.ethereum.core.*;
-import org.ethereum.crypto.ECKey;
+import org.apache.tuweni.crypto.SECP256K1;
+import org.apache.tuweni.eth.Block;
+import org.apache.tuweni.eth.Transaction;
+import org.apache.tuweni.eth.repository.BlockchainRepository;
 
 import java.math.BigInteger;
 
@@ -51,7 +53,7 @@ public class LocalExecutionService {
         }
     }
 
-    private Repository getRepository() {
+    private BlockchainRepository getRepository() {
         return blockchain.getRepository();
     }
 
@@ -61,7 +63,5 @@ public class LocalExecutionService {
         return tx;
     }
 
-    private ECKey getKey(EthAccount account) {
-        return ECKey.fromPrivate(account.getBigIntPrivateKey());
-    }
+    private SECP256K1.PublicKey getKey(EthAccount account) { return new SECP256K1.PublicKey.fromInteger(account.getBigIntPrivateKey()); }
 }

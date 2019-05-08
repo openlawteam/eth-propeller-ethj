@@ -5,12 +5,10 @@ import org.adridadou.ethereum.propeller.event.BlockInfo;
 import org.adridadou.ethereum.propeller.event.EthereumEventHandler;
 import org.adridadou.ethereum.propeller.solidity.converters.decoders.EthValueDecoder;
 import org.adridadou.ethereum.propeller.values.*;
-import org.ethereum.core.Block;
-import org.ethereum.core.BlockchainImpl;
-import org.ethereum.core.Repository;
-import org.ethereum.core.Transaction;
-import org.ethereum.crypto.ECKey;
-import org.ethereum.facade.Ethereum;
+import org.apache.tuweni.crypto.SECP256K1;
+import org.apache.tuweni.eth.Block;
+import org.apache.tuweni.eth.Transaction;
+import org.apache.tuweni.eth.repository.BlockchainRepository;
 
 import java.util.Collections;
 import java.util.Optional;
@@ -53,7 +51,7 @@ public class EthereumReal implements EthereumBackend {
         tx.sign(getKey(request.getAccount()));
         ethereum.submitTransaction(tx);
 
-        return EthHash.of(tx.getHash());
+        return EthHash.of(tx.hash().toBytes().toArray());
     }
 
     @Override
@@ -109,11 +107,9 @@ public class EthereumReal implements EthereumBackend {
         return (BlockchainImpl) ethereum.getBlockchain();
     }
 
-    private ECKey getKey(EthAccount account) {
-        return ECKey.fromPrivate(account.getBigIntPrivateKey());
-    }
+    private SECP256K1.PublicKey getKey(EthAccount account) { return new SECP256K1.PublicKey.fromInteger(account.getBigIntPrivateKey()); }
 
-    private Repository getRepository() {
+    private BlockchainRepository getRepository() {
         return getBlockchain().getRepository();
     }
 
@@ -123,9 +119,9 @@ public class EthereumReal implements EthereumBackend {
 
     private org.adridadou.ethereum.propeller.values.TransactionReceipt toReceipt(Transaction tx, EthHash blockHash) {
         return new org.adridadou.ethereum.propeller.values.TransactionReceipt(
-                EthHash.of(tx.getHash()),
+                EthHash.of(tx.hash().toBytes().toArray()),
                 blockHash,
-                EthAddress.of(tx.getSender()),
+                EthAddress.of(tx.sender().toBytes().toArray()),
                 EthAddress.of(tx.getReceiveAddress()),
                 EthAddress.empty(),
                 EthData.of(tx.getData()),
@@ -133,7 +129,7 @@ public class EthereumReal implements EthereumBackend {
                 EthData.empty(),
                 true,
                 Collections.emptyList(),
-                ethValueDecoder.decode(0, EthData.of(tx.getValue()), EthValue.class)
+                ethValueDecoder.decode(0, EthData.of(tx.value()), EthValue.class)
         );
     }
 }
